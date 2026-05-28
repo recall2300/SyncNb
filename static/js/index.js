@@ -6,6 +6,13 @@ let garminOffset = 0;   // raw Garmin API offset (all activity types)
 let hasMore = false;
 const PAGE_LIMIT = 30;
 
+// ── API helper ───────────────────────────────────────────────────────────────
+
+async function apiFetch(url, options = {}) {
+  const headers = { "Accept": "application/json", ...(options.headers || {}) };
+  return fetch(url, { ...options, headers });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 (async function init() {
@@ -18,7 +25,7 @@ const PAGE_LIMIT = 30;
 
 async function refreshStatus() {
   try {
-    const res = await fetch("/me");
+    const res = await apiFetch("/me");
     if (res.status === 401) { window.location.href = "/login"; return; }
     const data = await res.json();
     currentUser = data;
@@ -75,7 +82,7 @@ async function submitGarminLogin() {
   setModalLoading("login-btn", true);
   document.getElementById("modal-error").textContent = "";
   try {
-    const res  = await fetch("/garmin/login", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({email, password}) });
+    const res  = await apiFetch("/garmin/login", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({email, password}) });
     const data = await res.json();
     if (data.ok) {
       closeGarminModal(); setGarminStatus(true); loadActivities(false); showToast("Garmin 로그인 성공!", "success");
@@ -97,7 +104,7 @@ async function submitMfa() {
   setModalLoading("mfa-btn", true);
   document.getElementById("modal-error").textContent = "";
   try {
-    const res  = await fetch("/garmin/mfa", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({code}) });
+    const res  = await apiFetch("/garmin/mfa", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({code}) });
     const data = await res.json();
     if (data.ok) { closeGarminModal(); setGarminStatus(true); loadActivities(false); showToast("Garmin 로그인 성공!", "success"); }
     else         { document.getElementById("modal-error").textContent = data.error || "인증 실패"; }
@@ -106,7 +113,7 @@ async function submitMfa() {
 }
 
 async function logoutGarmin() {
-  await fetch("/garmin/logout", {method: "POST"});
+  await apiFetch("/garmin/logout", {method: "POST"});
   setGarminStatus(false);
   activities = [];
   garminOffset = 0;
@@ -127,7 +134,7 @@ function handleStravaClick() {
 }
 
 async function disconnectStrava() {
-  await fetch("/strava/disconnect", {method: "POST"});
+  await apiFetch("/strava/disconnect", {method: "POST"});
   setStravaStatus(false);
   showToast("Strava 연결 해제됨", "info");
   renderTable();
@@ -152,7 +159,7 @@ function openProfileModal() {
 async function handleAutoSync(cb) {
   cb.disabled = true;
   try {
-    const res  = await fetch("/auto-sync", {
+    const res  = await apiFetch("/auto-sync", {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({enabled: cb.checked}),
     });
@@ -199,7 +206,7 @@ async function changePassword() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>변경중...';
   try {
-    const res  = await fetch("/me/password", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({current, new: newPw}) });
+    const res  = await apiFetch("/me/password", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({current, new: newPw}) });
     const data = await res.json();
     if (data.ok) {
       // 서버에서 세션을 초기화하므로 재로그인 필요
@@ -213,7 +220,7 @@ async function changePassword() {
 }
 
 async function doLogout() {
-  await fetch("/logout", {method: "POST"});
+  await apiFetch("/logout", {method: "POST"});
   window.location.href = "/login";
 }
 
@@ -230,7 +237,7 @@ async function loadActivities(append) {
   }
 
   try {
-    const res  = await fetch(`/activities?offset=${garminOffset}&limit=${PAGE_LIMIT}`);
+    const res  = await apiFetch(`/activities?offset=${garminOffset}&limit=${PAGE_LIMIT}`);
     const data = await res.json();
     if (data.error) {
       if (!append) document.getElementById("table-wrap").innerHTML = `<div id="empty-msg" class="empty-error">${escHtml(data.error)}</div>`;
@@ -312,8 +319,8 @@ async function openDetailModal(garminId) {
   document.getElementById("detail-modal").showModal();
 
   const [splitsRes, detailsRes] = await Promise.all([
-    fetch("/activity/" + garminId + "/splits").catch(() => null),
-    fetch("/activity/" + garminId + "/details").catch(() => null),
+    apiFetch("/activity/" + garminId + "/splits").catch(() => null),
+    apiFetch("/activity/" + garminId + "/details").catch(() => null),
   ]);
 
   // 모달이 이미 닫혔으면 렌더링 중단 (빠른 닫기/재열기 케이스)
@@ -501,7 +508,7 @@ async function syncSelected() {
   for (const id of checked) {
     let r;
     try {
-      const res = await fetch("/sync", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({activity_ids: [id]}) });
+      const res = await apiFetch("/sync", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({activity_ids: [id]}) });
       r = (await res.json()).results[0];
     } catch(e) { r = {garmin_id: id, ok: false, error: e.message}; }
 

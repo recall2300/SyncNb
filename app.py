@@ -69,6 +69,10 @@ limiter = Limiter(
     storage_uri="memory://",
 )
 
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({"error": f"요청이 너무 많습니다. 잠시 후 다시 시도해주세요. ({e.description})"}), 429
+
 sync_db.init_db()
 
 # 로그인 타이밍 공격 방어용 더미 해시.
@@ -130,6 +134,15 @@ def add_security_headers(response):
 
 # ── 인증 데코레이터 ─────────────────────────────────────────────────────────────
 
+def _wants_json():
+    """클라이언트가 JSON 응답을 기대하는 요청인지 판별."""
+    return (
+        request.is_json
+        or "application/json" in request.headers.get("Accept", "")
+        or request.path.startswith("/admin/api")
+    )
+
+
 def login_required(f):
     """
     로그인 확인 데코레이터.
@@ -140,7 +153,7 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("user_id"):
-            if request.is_json or request.path.startswith("/admin/api"):
+            if _wants_json():
                 return jsonify({"error": "로그인이 필요합니다."}), 401
             return redirect("/login")
         return f(*args, **kwargs)
@@ -155,7 +168,7 @@ def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("user_id"):
-            if request.is_json or request.path.startswith("/admin/api"):
+            if _wants_json():
                 return jsonify({"error": "로그인이 필요합니다."}), 401
             return redirect("/login")
         if not session.get("is_admin"):
@@ -601,7 +614,7 @@ def activity_splits(garmin_id):
 
 @app.route("/sync", methods=["POST"])
 @login_required
-@limiter.limit("10 per minute")
+@limiter.limit("60 per minute")
 def sync():
     """
     Garmin FIT 파일을 Strava에 업로드한다. 여러 활동을 배열로 한 번에 전달 가능.
