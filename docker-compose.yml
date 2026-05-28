@@ -1,6 +1,6 @@
 services:
   syncnb:
-    build: .
+    image: ${DOCKER_IMAGE:-username/syncnb:latest}
     container_name: syncnb
     restart: unless-stopped
     env_file: .env
