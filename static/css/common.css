@@ -1,0 +1,82 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Light Mode (default) ─────────────────────── */
+:root {
+  --bg:            #f8f5f0;
+  --surface:       #ffffff;
+  --surface-2:     #f5f0eb;
+  --surface-3:     #ede8e2;
+  --border:        #d8cdc2;
+  --border-accent: #c85a00;
+  --text-1:        #1f1a15;
+  --text-2:        #6b5040;
+  --text-3:        #a89080;
+  --accent:        #c85a00;
+  --accent-hover:  #a04800;
+  --accent-dim:    rgba(200, 90, 0, 0.09);
+  --accent-border: rgba(200, 90, 0, 0.28);
+  --success:       #2d7a2d;
+  --success-dim:   rgba(45, 122, 45, 0.1);
+  --error:         #c42b2b;
+  --error-dim:     rgba(196, 43, 43, 0.1);
+  --warning:       #8a6a00;
+  --warning-dim:   rgba(138, 106, 0, 0.1);
+  --info:          #2b5ac4;
+  --info-dim:      rgba(43, 90, 196, 0.1);
+  --mono:          'JetBrains Mono', 'Nanum Gothic Coding', 'D2Coding', 'Consolas', 'Courier New', monospace;
+  --radius:        4px;
+  --radius-sm:     2px;
+  --radius-lg:     6px;
+}
+
+/* ── Dark Mode ──────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:            #0d0a08;
+  --surface:       #150f0a;
+  --surface-2:     #1d140e;
+  --surface-3:     #251a12;
+  --border:        #2e1e14;
+  --border-accent: #ff6b1a;
+  --text-1:        #e8d5c0;
+  --text-2:        #b87a4a;
+  --text-3:        #5a3820;
+  --accent:        #ff6b1a;
+  --accent-hover:  #ff8a40;
+  --accent-dim:    rgba(255, 107, 26, 0.08);
+  --accent-border: rgba(255, 107, 26, 0.22);
+  --success:       #4aff4a;
+  --success-dim:   rgba(74, 255, 74, 0.08);
+  --error:         #ff5555;
+  --error-dim:     rgba(255, 85, 85, 0.1);
+  --warning:       #ffbb33;
+  --warning-dim:   rgba(255, 187, 51, 0.1);
+  --info:          #55aaff;
+  --info-dim:      rgba(85, 170, 255, 0.1);
+}
+
+/* ── Spinner ──────────────────────────────────── */
+.spinner {
+  display: inline-block; width: 12px; height: 12px;
+  border: 1.5px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+  vertical-align: middle; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast ────────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 20px; right: 20px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8rem; font-weight: 600;
+  font-family: var(--mono);
+  color: var(--text-1);
+  background: var(--surface);
+  opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 9999;
+  letter-spacing: 0.02em;
+}
+#toast.show    { opacity: 1; }
+#toast.success { border-color: var(--success); color: var(--success); background: var(--success-dim); }
+#toast.error   { border-color: var(--error);   color: var(--error);   background: var(--error-dim); }
+#toast.info    { border-color: var(--info);     color: var(--info);    background: var(--info-dim); }

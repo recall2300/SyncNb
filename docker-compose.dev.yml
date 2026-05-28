@@ -1,0 +1,56 @@
+# docker-compose.dev.yml — Windows 로컬 개발 / 테스트용 Docker 설정
+#
+# 프로덕션(docker-compose.yml)과 차이점:
+#   - 소스 코드를 볼륨으로 마운트 → 코드 수정 시 컨테이너 재빌드 불필요
+#   - 환경변수를 inline으로 설정 (.env 없어도 바로 실행 가능)
+#   - ALLOW_REGISTRATION=true (테스트 계정 생성 편의)
+#   - Nginx 없음 (HTTP만, 로컬 테스트용)
+#
+# 실행 방법:
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# 접속:
+#   http://localhost:5000
+#
+# 중지:
+#   docker compose -f docker-compose.dev.yml down
+
+services:
+  syncnb-dev:
+    build: .
+    container_name: syncnb-dev
+    # 코드 변경 감지를 위해 소스 디렉토리를 컨테이너에 마운트
+    # (단, .venv 는 제외: 컨테이너 내부 Python 환경을 사용)
+    volumes:
+      - .:/app
+      - /app/.venv           # 호스트 .venv 무시 → 컨테이너 내부 site-packages 사용
+      - syncnb_dev_db:/app   # DB 파일 유지 (선택: 매번 초기화하려면 이 줄 제거)
+      - garmin_tokens_dev:/home/syncnb/.garminconnect
+    ports:
+      - "5000:5000"
+    environment:
+      # 개발용 기본값 — 프로덕션에서는 .env 파일 사용
+      - FLASK_SECRET_KEY=dev-secret-key-not-for-production
+      - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID:-}
+      - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET:-}
+      - STRAVA_REDIRECT_URI=http://localhost:5000/strava/callback
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin123
+      - HTTPS_ENABLED=false
+      - ALLOW_REGISTRATION=true   # 테스트 계정 생성 허용
+    # 컨테이너 내부에서 Flask 내장 서버로 실행 (개발 편의)
+    # 코드 변경 후 자동 재시작을 원하면 CMD를 아래로 변경:
+    #   command: python app.py
+    command: >
+      sh -c "pip install -r requirements.txt -q && python app.py"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:5000/login')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  syncnb_dev_db:
+  garmin_tokens_dev:

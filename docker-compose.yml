@@ -1,0 +1,58 @@
+services:
+  syncnb:
+    build: .
+    container_name: syncnb
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # DB 파일: 컨테이너 재생성 후에도 데이터 유지
+      # ⚠️ 주의: syncnb.db 파일이 없으면 Docker가 디렉토리로 생성해 앱이 즉시 크래시함.
+      # 첫 배포 전에 반드시 빈 파일을 미리 만들어둘 것:
+      #   touch syncnb.db   (Linux/macOS)
+      #   New-Item -ItemType File syncnb.db   (Windows PowerShell)
+      - ./syncnb.db:/app/syncnb.db
+      # Garmin 세션 토큰: named volume으로 관리 (호스트 경로 노출 최소화)
+      - garmin_tokens:/home/syncnb/.garminconnect
+    # NAS 내장 Reverse Proxy 또는 Nginx가 없는 경우 직접 포트 노출
+    # Nginx를 사용하는 경우 아래 ports 블록은 주석 처리하고 networks만 사용
+    ports:
+      - "5000:5000"
+    networks:
+      - syncnb_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/login')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Nginx Reverse Proxy (HTTPS 사용 시 활성화) ──────────────────────────────
+  # NAS 내장 Reverse Proxy를 쓴다면 이 섹션 전체 주석 처리
+  # 사용 방법:
+  #   1. nginx/certs/ 에 SSL 인증서 배치 (Let's Encrypt 권장)
+  #   2. nginx/nginx.conf 에서 도메인명 수정
+  #   3. syncnb 서비스의 ports 블록 주석 처리 (Nginx만 외부 노출)
+  #   4. .env 에서 HTTPS_ENABLED=true 설정
+  nginx:
+    image: nginx:alpine
+    container_name: syncnb_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - syncnb
+    networks:
+      - syncnb_net
+    profiles:
+      # docker compose --profile nginx up 으로 실행할 때만 활성화
+      - nginx
+
+volumes:
+  garmin_tokens:
+
+networks:
+  syncnb_net:
+    driver: bridge

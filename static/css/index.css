@@ -1,0 +1,364 @@
+/* ── Header ───────────────────────────────────── */
+header {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border-accent);
+  color: var(--text-1);
+  padding: 0 16px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+header h1 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: var(--mono);
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.header-subtitle {
+  font-size: 0.65rem;
+  font-weight: 400;
+  font-family: var(--mono);
+  color: var(--text-3);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Connection Badges ────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius);
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--mono);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  user-select: none;
+  white-space: nowrap;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+.badge.connected {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.badge.connected:hover  { border-color: var(--border-accent); }
+.badge.disconnected:hover {
+  border-color: var(--border-accent);
+  color: var(--text-2);
+}
+.dot    { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot.on { background: var(--accent); }
+.dot.off{ background: var(--text-3); }
+
+/* ── Header Right ─────────────────────────────── */
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.btn-ghost, .icon-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--mono);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+.btn-ghost:hover, .icon-btn:hover {
+  border-color: var(--border-accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+#theme-btn {
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  letter-spacing: 0;
+}
+
+.admin-link {
+  color: var(--text-2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--mono);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  background: transparent;
+  border: 1px solid var(--border);
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+.admin-link:hover {
+  border-color: var(--border-accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ── Main Layout ──────────────────────────────── */
+main { max-width: 960px; margin: 24px auto; padding: 0 20px; }
+
+/* ── Table rows ───────────────────────────────── */
+tbody tr.clickable { cursor: pointer; }
+tbody tr.clickable:hover td { background: var(--surface-2); }
+
+/* Monospace data columns */
+tbody td:nth-child(2) { font-family: var(--mono); font-size: 0.82rem; color: var(--text-2); }
+tbody td:nth-child(4) { font-family: var(--mono); font-weight: 700; }
+tbody td:nth-child(5) { font-family: var(--mono); color: var(--text-2); }
+
+/* ── Status Badges ────────────────────────────── */
+.synced-badge {
+  display: inline-block; padding: 2px 7px; border-radius: var(--radius);
+  font-size: 0.7rem; font-weight: 700; font-family: var(--mono);
+  background: var(--success-dim); color: var(--success);
+  border: 1px solid rgba(45,122,45,0.2);
+  letter-spacing: 0.04em;
+}
+.error-badge {
+  display: inline-block; padding: 2px 7px; border-radius: var(--radius);
+  font-size: 0.7rem; font-weight: 700; font-family: var(--mono);
+  background: var(--error-dim); color: var(--error);
+  border: 1px solid rgba(196,43,43,0.2);
+  letter-spacing: 0.04em;
+}
+.pending-badge {
+  display: inline-block; padding: 2px 7px; border-radius: var(--radius);
+  font-size: 0.7rem; font-weight: 700; font-family: var(--mono);
+  background: var(--warning-dim); color: var(--warning);
+  border: 1px solid rgba(138,106,0,0.2);
+  letter-spacing: 0.04em;
+}
+
+/* ── Empty / Loading ──────────────────────────── */
+#empty-msg {
+  padding: 48px 20px; text-align: center;
+  color: var(--text-3); font-size: 0.82rem;
+  font-family: var(--mono); letter-spacing: 0.05em;
+}
+.note-cell { max-width: 180px; word-break: break-all; }
+.note-cell a { color: var(--accent); text-decoration: none; }
+.note-cell a:hover { text-decoration: underline; }
+
+/* ── Progress Bar ─────────────────────────────── */
+.progress-wrap {
+  padding: 9px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.progress-track { display: flex; align-items: center; gap: 12px; }
+.progress-rail  { flex: 1; background: var(--border); border-radius: 2px; height: 3px; }
+#progress-bar   { background: var(--accent); height: 3px; border-radius: 2px; width: 0%; transition: width 0.25s; }
+#progress-text  { font-size: 0.72rem; font-weight: 600; font-family: var(--mono); color: var(--text-2); white-space: nowrap; }
+
+/* ── Modal sizes ──────────────────────────────── */
+#garmin-modal, #profile-modal { width: 360px; max-width: 95vw; }
+#detail-modal { width: min(720px, 96vw); max-height: 90vh; overflow: hidden; }
+#detail-inner { max-height: 90vh; overflow-y: auto; }
+
+.section-title { font-size: 0.78rem; font-weight: 700; font-family: var(--mono); color: var(--text-2); margin-bottom: 12px; letter-spacing: 0.05em; text-transform: uppercase; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+/* ── Activity Detail Modal ────────────────────── */
+.detail-header {
+  background: var(--surface-2);
+  border-bottom: 2px solid var(--border-accent);
+  padding: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.detail-header-title    { font-size: 1rem; font-weight: 700; color: var(--text-1); letter-spacing: -0.01em; }
+.detail-header-date     { font-size: 0.78rem; font-family: var(--mono); color: var(--text-2); margin-top: 4px; }
+.detail-header-location { font-size: 0.75rem; color: var(--text-3); margin-top: 3px; }
+.detail-close {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-2);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 3px 8px;
+  line-height: 1.4;
+  flex-shrink: 0;
+  font-family: var(--mono);
+  transition: border-color 0.12s, color 0.12s;
+}
+.detail-close:hover { border-color: var(--border-accent); color: var(--accent); }
+
+/* ── Metric Grid ──────────────────────────────── */
+.detail-body { padding: 18px 20px; }
+.metric-grid  { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 20px; }
+.metric-box   {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 6px;
+  text-align: center;
+}
+.metric-icon  { font-size: 1rem; }
+.metric-value { font-size: 0.9rem; font-weight: 700; font-family: var(--mono); color: var(--text-1); margin: 4px 0 3px; }
+.metric-label { font-size: 0.6rem; color: var(--text-3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--mono); }
+
+/* ── Splits Table ─────────────────────────────── */
+.splits-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); font-family: var(--mono); margin-bottom: 8px; }
+.splits-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.splits-table th {
+  padding: 6px 8px; text-align: right; color: var(--text-3);
+  font-weight: 700; font-family: var(--mono); border-bottom: 1px solid var(--border); font-size: 0.68rem;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.splits-table th:first-child { text-align: left; }
+.splits-table td {
+  padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--border);
+  color: var(--text-1); font-family: var(--mono);
+}
+.splits-table td:first-child { text-align: left; font-weight: 700; color: var(--text-2); }
+.splits-table tbody tr:last-child td { border-bottom: none; }
+.splits-table tbody tr:hover td { background: var(--surface-2); }
+
+/* ── Load More ────────────────────────────────── */
+.load-more-wrap {
+  text-align: center;
+  padding: 16px 0 8px;
+}
+.load-more-end {
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  color: var(--text-3);
+  letter-spacing: 0.06em;
+}
+
+/* ── Map ──────────────────────────────────────── */
+.map-container {
+  width: 100%;
+  height: 220px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+#leaflet-map {
+  width: 100%;
+  height: 100%;
+}
+.map-loading, .map-no-data {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-family: var(--mono);
+  color: var(--text-3);
+  gap: 6px;
+}
+
+/* ── Detail Notes ─────────────────────────────── */
+.detail-note {
+  font-size: 0.78rem;
+  font-family: var(--mono);
+  color: var(--text-3);
+  padding: 16px 0;
+  text-align: center;
+}
+.detail-note-err { color: var(--error); }
+
+/* ── Moving Duration Note ─────────────────────── */
+.moving-note {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+/* ── Empty Error ──────────────────────────────── */
+.empty-error { color: var(--error) !important; }
+
+/* ── Km Markers (Leaflet) ─────────────────────── */
+.km-marker { background: none !important; border: none !important; }
+.km-marker-inner {
+  width: 22px;
+  height: 22px;
+  background: var(--accent);
+  color: var(--bg);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  cursor: default;
+  line-height: 1;
+}
+.km-tooltip.leaflet-tooltip {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-accent) !important;
+  color: var(--text-1) !important;
+  font-family: var(--mono) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  padding: 3px 8px !important;
+  border-radius: var(--radius) !important;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+}
+.km-tooltip.leaflet-tooltip::before { border-top-color: var(--border-accent) !important; }
+
+/* ── Mobile Responsive ────────────────────────── */
+@media (max-width: 640px) {
+  header { padding: 0 12px; gap: 6px; }
+  .header-subtitle { display: none; }
+
+  /* Show dot only, hide badge text label on mobile */
+  .badge { padding: 4px 6px; }
+  #garmin-label, #strava-label { display: none; }
+
+  main { margin: 12px auto; padding: 0 10px; }
+
+  /* Hide time & notes columns on mobile */
+  thead th:nth-child(5),
+  tbody td:nth-child(5),
+  thead th:nth-child(7),
+  tbody td:nth-child(7) { display: none; }
+
+  tbody td { padding: 9px 8px; font-size: 0.8rem; }
+  tbody td:nth-child(2) { font-size: 0.72rem; }
+
+  .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  .map-container { height: 180px; }
+  #detail-modal { max-height: 95vh; }
+
+  .btn-ghost, .icon-btn { padding: 4px 7px; font-size: 0.72rem; }
+  .admin-link { padding: 4px 7px; font-size: 0.72rem; }
+}
+
+@media (max-width: 400px) {
+  /* Extra small: also hide distance on very narrow screens */
+  header h1 { font-size: 0.9rem; }
+  .btn-ghost span, .admin-link span { display: none; }
+}
