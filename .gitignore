@@ -1,0 +1,10 @@
+.env
+syncnb.db
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.garminconnect/
+
+# Docker
+nginx/certs/
