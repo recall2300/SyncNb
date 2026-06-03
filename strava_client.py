@@ -18,7 +18,8 @@ import requests
 import sync_db
 from config import (
     STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET,
-    STRAVA_REDIRECT_URI, STRAVA_AUTH_URL, STRAVA_TOKEN_URL, STRAVA_UPLOAD_URL,
+    STRAVA_REDIRECT_URI, STRAVA_AUTH_URL, STRAVA_TOKEN_URL,
+    STRAVA_API_BASE, STRAVA_UPLOAD_URL,
     STRAVA_POLL_RETRIES, STRAVA_POLL_INTERVAL,
 )
 
@@ -63,7 +64,7 @@ def exchange_code(user_id: int, code: str) -> dict:
         "client_secret": STRAVA_CLIENT_SECRET,
         "code":          code,
         "grant_type":    "authorization_code",
-    })
+    }, timeout=30)
     resp.raise_for_status()
     data = resp.json()
     sync_db.save_strava_tokens(
@@ -102,7 +103,7 @@ def get_valid_access_token(user_id: int) -> str:
             "client_secret": STRAVA_CLIENT_SECRET,
             "grant_type":    "refresh_token",
             "refresh_token": tokens["refresh_token"],
-        })
+        }, timeout=30)
         resp.raise_for_status()
         new_tokens = resp.json()
         sync_db.save_strava_tokens(
@@ -115,6 +116,14 @@ def get_valid_access_token(user_id: int) -> str:
         return new_tokens["access_token"]
 
     return tokens["access_token"]
+
+
+def has_tokens(user_id: int) -> bool:
+    """
+    DB에 Strava 토큰이 존재하는지 확인한다 (네트워크 호출 없음).
+    관리자 패널처럼 다수 사용자를 한 번에 확인할 때 사용한다.
+    """
+    return sync_db.load_strava_tokens(user_id) is not None
 
 
 def is_connected(user_id: int) -> bool:
@@ -144,8 +153,9 @@ def activity_exists(user_id: int, strava_activity_id: int) -> bool | None:
     try:
         token = get_valid_access_token(user_id)
         resp = requests.get(
-            f"https://www.strava.com/api/v3/activities/{strava_activity_id}",
+            f"{STRAVA_API_BASE}/activities/{strava_activity_id}",
             headers={"Authorization": f"Bearer {token}"},
+            timeout=30,
         )
         if resp.status_code == 200:
             return True
@@ -185,6 +195,7 @@ def upload_fit(user_id: int, fit_bytes: bytes, filename: str,
         headers={"Authorization": f"Bearer {token}"},
         files={"file": (filename, fit_bytes, "application/octet-stream")},
         data=form_data,
+        timeout=60,  # FIT 파일 업로드는 파일 크기에 따라 더 오래 걸릴 수 있음
     )
     resp.raise_for_status()
     return int(resp.json()["id_str"])
@@ -217,7 +228,7 @@ def poll_upload(user_id: int, upload_id: int) -> dict:
     poll_url = f"{STRAVA_UPLOAD_URL}/{upload_id}"
 
     for _ in range(STRAVA_POLL_RETRIES):
-        resp = requests.get(poll_url, headers=headers)
+        resp = requests.get(poll_url, headers=headers, timeout=30)
         resp.raise_for_status()
         payload = resp.json()
 

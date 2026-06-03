@@ -50,10 +50,13 @@ STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET", "")
 # Strava 앱 설정의 "Authorization Callback Domain"도 같은 도메인으로 설정해야 함.
 STRAVA_REDIRECT_URI = os.getenv("STRAVA_REDIRECT_URI", "http://localhost:5000/strava/callback")
 
-# Strava API 엔드포인트 (변경 불필요)
-STRAVA_AUTH_URL   = "https://www.strava.com/oauth/authorize"
-STRAVA_TOKEN_URL  = "https://www.strava.com/oauth/token"
-STRAVA_UPLOAD_URL = "https://www.strava.com/api/v3/uploads"
+# Strava API 엔드포인트
+# 2027-06-01부터 API base URL이 https://www.api-v3.strava.com 으로 변경됨.
+# 전환 시 STRAVA_API_BASE 값만 바꾸면 모든 엔드포인트에 반영된다.
+STRAVA_AUTH_URL  = "https://www.strava.com/oauth/authorize"
+STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
+STRAVA_API_BASE  = "https://www.strava.com/api/v3"
+STRAVA_UPLOAD_URL = f"{STRAVA_API_BASE}/uploads"
 
 # ── Flask 설정 ──────────────────────────────────────────────────────────────────
 
@@ -86,4 +89,4 @@ HTTPS_ENABLED = os.getenv("HTTPS_ENABLED", "false").lower() == "true"
 
 # false 설정 시 /register 엔드포인트가 403을 반환한다.
 # 공개 인터넷 배포 시 false 권장 — 관리자 패널에서 직접 계정을 생성한다.
-ALLOW_REGISTRATION = os.getenv("ALLOW_REGISTRATION", "true").lower() == "true"
+ALLOW_REGISTRATION = os.getenv("ALLOW_REGISTRATION", "false").lower() == "true"

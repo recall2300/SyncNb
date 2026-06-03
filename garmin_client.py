@@ -15,6 +15,7 @@ MFA 흐름:
 
 import io
 import logging
+import shutil
 import time
 import zipfile
 from pathlib import Path
@@ -77,6 +78,15 @@ def login_with_credentials(user_id: int, email: str, password: str) -> tuple[boo
         Exception: Garmin 로그인 실패 (잘못된 자격증명 등).
     """
     _cleanup_expired_mfa()
+
+    # 기존 토큰 삭제 후 새 로그인 시도.
+    # garminconnect 라이브러리는 tokenstore에 파일이 있으면 email/password를 무시하고
+    # 기존 토큰을 재사용한다. 다른 계정으로 전환할 때 이전 계정 토큰이 남아있으면
+    # 새 자격증명이 무시되거나 토큰 불일치로 오류가 발생하므로, 항상 깨끗한 상태에서 시작한다.
+    token_path = Path(GARMIN_TOKEN_STORE) / str(user_id)
+    if token_path.exists():
+        shutil.rmtree(token_path)
+
     client = Garmin(email=email, password=password, return_on_mfa=True)
     mfa_state, _ = client.login(_token_store_path(user_id))
     if mfa_state:
@@ -141,8 +151,25 @@ def _load_client(user_id: int) -> Garmin | None:
         client = Garmin()
         client.login(_token_store_path(user_id))
         return client
-    except Exception:
+    except Exception as exc:
+        logging.debug("Garmin 클라이언트 로드 실패 (user_id=%s): %s", user_id, exc)
         return None
+
+
+def is_running_activity(act: dict) -> bool:
+    """Garmin 활동 딕셔너리가 러닝 종목인지 확인한다."""
+    activity_type = act.get("activityType")
+    type_key = activity_type.get("typeKey", "") if isinstance(activity_type, dict) else str(activity_type)
+    return "running" in type_key.lower()
+
+
+def has_token_files(user_id: int) -> bool:
+    """
+    Garmin 토큰 파일이 존재하는지 확인한다 (네트워크 호출 없음).
+    관리자 패널 목록처럼 다수 사용자를 한 번에 확인할 때 사용한다.
+    """
+    token_path = Path(GARMIN_TOKEN_STORE) / str(user_id)
+    return token_path.exists() and any(token_path.iterdir())
 
 
 def is_logged_in(user_id: int) -> bool:
@@ -155,7 +182,6 @@ def logout(user_id: int) -> None:
     Garmin 세션 토큰 파일을 삭제하고 MFA 세션을 제거한다.
     사용자 계정 삭제 또는 명시적 로그아웃 시 호출된다.
     """
-    import shutil
     _pending_mfa.pop(user_id, None)
     token_path = Path(GARMIN_TOKEN_STORE) / str(user_id)
     if token_path.exists():

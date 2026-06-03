@@ -27,7 +27,7 @@ function renderUsers() {
     const garmin = u.garmin_connected ? '<span class="status-on">● Garmin</span>' : '<span class="status-off">● Garmin</span>';
     const strava = u.strava_connected ? '<span class="status-on">● Strava</span>'  : '<span class="status-off">● Strava</span>';
     const athleteCell = u.strava_athlete_id
-      ? `<a href="https://www.strava.com/athletes/${u.strava_athlete_id}" target="_blank" style="color:#fc4c02;font-size:0.82rem;">${u.strava_athlete_id}</a>`
+      ? `<a href="https://www.strava.com/athletes/${u.strava_athlete_id}" target="_blank" rel="noopener noreferrer" style="color:#fc4c02;font-size:0.82rem;">${u.strava_athlete_id}</a>`
       : '<span style="color:#d1d5db;">—</span>';
     const created = u.created_at ? u.created_at.slice(0, 10) : '';
     return `
@@ -85,7 +85,7 @@ async function toggleActivities(userId) {
 
     const actRows = acts.map(a => {
       const stravaLink   = a.strava_id
-        ? `<a href="https://www.strava.com/activities/${a.strava_id}" target="_blank" style="color:#fc4c02;">${a.strava_id}</a>`
+        ? `<a href="https://www.strava.com/activities/${a.strava_id}" target="_blank" rel="noopener noreferrer" style="color:#fc4c02;">${a.strava_id}</a>`
         : '<span style="color:#d1d5db;">—</span>';
       const statusColor  = {uploaded:"#16a34a", error:"#dc2626", pending:"#d97706"}[a.status] || "#6b7280";
       const syncedAt     = a.synced_at ? a.synced_at.slice(0, 16).replace("T", " ") : "";
@@ -124,7 +124,7 @@ async function saveEdit() {
   const isAdmin = document.getElementById("edit-admin").checked;
   const errEl   = document.getElementById("edit-error");
   errEl.textContent = "";
-  if (pw && pw.length < 6) { errEl.textContent = "비밀번호는 6자 이상이어야 합니다."; return; }
+  if (pw && pw.length < 8) { errEl.textContent = "비밀번호는 8자 이상이어야 합니다."; return; }
 
   const body = {is_admin: isAdmin};
   if (pw) body.password = pw;

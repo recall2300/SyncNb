@@ -29,7 +29,6 @@ async function refreshStatus() {
     if (res.status === 401) { window.location.href = "/login"; return; }
     const data = await res.json();
     currentUser = data;
-    document.getElementById("profile-btn").textContent = data.username;
     document.getElementById("admin-link").style.display = data.is_admin ? "" : "none";
     setGarminStatus(data.garmin_connected);
     setStravaStatus(data.strava_connected);
@@ -39,18 +38,23 @@ async function refreshStatus() {
 
 // ── Status badges ─────────────────────────────────────────────────────────────
 
+// 모바일(≤640px)에서는 "연결됨" 없이 서비스명만 표시 — dot 색상으로 연결 여부 구분
+const _isMobileHeader = () => window.matchMedia("(max-width: 640px)").matches;
+
 function setGarminStatus(connected) {
   garminConnected = connected;
   document.getElementById("garmin-badge").className = "badge " + (connected ? "connected" : "disconnected");
   document.getElementById("garmin-dot").className   = "dot " + (connected ? "on" : "off");
-  document.getElementById("garmin-label").textContent = connected ? "Garmin 연결됨" : "Garmin";
+  document.getElementById("garmin-label").textContent =
+    (!_isMobileHeader() && connected) ? "Garmin 연결됨" : "Garmin";
 }
 
 function setStravaStatus(connected) {
   stravaConnected = connected;
   document.getElementById("strava-badge").className = "badge " + (connected ? "connected" : "disconnected");
   document.getElementById("strava-dot").className   = "dot " + (connected ? "on" : "off");
-  document.getElementById("strava-label").textContent = connected ? "Strava 연결됨" : "Strava";
+  document.getElementById("strava-label").textContent =
+    (!_isMobileHeader() && connected) ? "Strava 연결됨" : "Strava";
 }
 
 // ── Garmin ────────────────────────────────────────────────────────────────────
@@ -201,7 +205,7 @@ async function changePassword() {
   errEl.textContent = "";
   if (!current)          { errEl.textContent = "현재 비밀번호를 입력해주세요."; return; }
   if (newPw !== newPw2)  { errEl.textContent = "새 비밀번호가 일치하지 않습니다."; return; }
-  if (newPw.length < 6)  { errEl.textContent = "새 비밀번호는 6자 이상이어야 합니다."; return; }
+  if (newPw.length < 8)  { errEl.textContent = "새 비밀번호는 8자 이상이어야 합니다."; return; }
   const btn = document.getElementById("pw-btn");
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>변경중...';
@@ -226,7 +230,7 @@ async function doLogout() {
 
 // ── Activities (with pagination) ──────────────────────────────────────────────
 
-async function loadActivities(append) {
+async function loadActivities(append, _autoSkips = 0) {
   if (!append) {
     garminOffset = 0;
     activities   = [];
@@ -240,6 +244,8 @@ async function loadActivities(append) {
     const res  = await apiFetch(`/activities?offset=${garminOffset}&limit=${PAGE_LIMIT}`);
     const data = await res.json();
     if (data.error) {
+      // Garmin 세션 만료: 뱃지를 disconnected로 갱신해 사용자가 재연결하도록 안내
+      if (data.garmin_error) setGarminStatus(false);
       if (!append) document.getElementById("table-wrap").innerHTML = `<div id="empty-msg" class="empty-error">${escHtml(data.error)}</div>`;
       else showToast(data.error, "error");
       return;
@@ -247,6 +253,14 @@ async function loadActivities(append) {
     activities   = append ? [...activities, ...data.activities] : data.activities;
     hasMore      = data.has_more;
     garminOffset += PAGE_LIMIT;
+
+    // 이번 페이지에 러닝 활동이 없지만 Garmin에 더 있으면 자동으로 다음 페이지 조회
+    // (사이클·수영 등 비러닝 활동만 있는 페이지를 사용자가 직접 스킵해야 하는 불편 해소)
+    if (data.activities.length === 0 && data.has_more && _autoSkips < 10) {
+      await loadActivities(true, _autoSkips + 1);
+      return;
+    }
+
     renderTable();
   } catch(e) {
     if (!append) document.getElementById("table-wrap").innerHTML = `<div id="empty-msg" class="empty-error">오류: ${escHtml(e.message)}</div>`;
@@ -553,11 +567,11 @@ function buildNoteCell(a) {
     const color  = colors[n.type] || "#6b7280";
     const text   = escHtml(n.text);
     return n.url
-      ? `<a href="${n.url}" target="_blank" style="color:${color};font-size:0.8rem;text-decoration:none;" title="${text}">↗ ${text}</a>`
+      ? `<a href="${n.url}" target="_blank" rel="noopener noreferrer" style="color:${color};font-size:0.8rem;text-decoration:none;" title="${text}">↗ ${text}</a>`
       : `<span style="color:${color};font-size:0.8rem;">${text}</span>`;
   }
   if (a.synced && a.strava_activity_id) {
-    return `<a href="https://www.strava.com/activities/${a.strava_activity_id}" target="_blank" style="color:#16a34a;font-size:0.8rem;text-decoration:none;">↗ Strava</a>`;
+    return `<a href="https://www.strava.com/activities/${a.strava_activity_id}" target="_blank" rel="noopener noreferrer" style="color:#16a34a;font-size:0.8rem;text-decoration:none;">↗ Strava</a>`;
   }
   return "";
 }

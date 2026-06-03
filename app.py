@@ -33,6 +33,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY
+app.config["TEMPLATES_AUTO_RELOAD"] = True  # debug=False에서도 템플릿 파일 변경 즉시 반영
 if config.FLASK_SECRET_KEY == "syncnb-dev-key-change-me":
     logging.critical(
         "[보안 위험] FLASK_SECRET_KEY가 기본값입니다! 세션 쿠키 위조 공격에 취약합니다. "
@@ -129,10 +130,42 @@ def add_security_headers(response):
         "Permissions-Policy",
         "geolocation=(), camera=(), microphone=(), payment=()"
     )
+    # HTTPS 배포 시: 브라우저가 이후 1년간 HTTPS로만 접속하도록 강제
+    if config.HTTPS_ENABLED:
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
     return response
 
 
 # ── 인증 데코레이터 ─────────────────────────────────────────────────────────────
+
+def _validate_session() -> bool:
+    """
+    세션 유효성을 검증한다.
+
+    user_id 부재 또는 password_version 불일치(비밀번호 변경 후 강제 로그아웃) 시
+    세션을 초기화하고 False를 반환한다.
+    DB 오류(컬럼 미존재 등) 시에는 세션을 유지한다 — 강제 로그아웃 방지.
+    """
+    user_id = session.get("user_id")
+    if not user_id:
+        return False
+    try:
+        db_pv = sync_db.get_password_version(user_id)
+    except Exception as exc:
+        logging.warning("password_version 조회 실패 (user_id=%s): %s", user_id, exc)
+        return True  # DB 오류 시 세션 유지
+    if db_pv is None:
+        # DB에 사용자가 없음 (삭제된 계정)
+        session.clear()
+        return False
+    # session.get("password_version", 0): v5 이전 세션은 키가 없으므로 0으로 처리
+    if session.get("password_version", 0) != db_pv:
+        session.clear()
+        return False
+    return True
+
 
 def _wants_json():
     """클라이언트가 JSON 응답을 기대하는 요청인지 판별."""
@@ -146,13 +179,13 @@ def _wants_json():
 def login_required(f):
     """
     로그인 확인 데코레이터.
-    세션에 user_id가 없으면:
+    세션이 없거나 password_version 불일치(비밀번호 변경 후)이면:
       - 일반 페이지 요청: /login으로 리다이렉트
       - JSON/API 요청: 401 반환
     """
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get("user_id"):
+        if not _validate_session():
             if _wants_json():
                 return jsonify({"error": "로그인이 필요합니다."}), 401
             return redirect("/login")
@@ -163,11 +196,11 @@ def login_required(f):
 def admin_required(f):
     """
     관리자 권한 확인 데코레이터.
-    로그인은 됐지만 is_admin이 False면 403 반환.
+    세션 유효성 검사 후 is_admin이 False면 403 반환.
     """
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get("user_id"):
+        if not _validate_session():
             if _wants_json():
                 return jsonify({"error": "로그인이 필요합니다."}), 401
             return redirect("/login")
@@ -217,6 +250,7 @@ def login():
     session["user_id"] = user["id"]
     session["username"] = user["username"]
     session["is_admin"] = user["is_admin"]
+    session["password_version"] = user["password_version"]
     return jsonify({"ok": True, "is_admin": user["is_admin"]})
 
 
@@ -240,6 +274,8 @@ def register():
     password = body.get("password") or ""
     if len(username) < 3:
         return jsonify({"error": "아이디는 3자 이상이어야 합니다."}), 400
+    if len(username) > 32:
+        return jsonify({"error": "아이디는 32자 이하이어야 합니다."}), 400
     if len(password) < 8:
         return jsonify({"error": "비밀번호는 8자 이상이어야 합니다."}), 400
     if sync_db.get_user_by_username(username):
@@ -508,22 +544,21 @@ def activities():
         limit, offset = config.GARMIN_ACTIVITY_LIMIT, 0
 
     try:
-        # limit+1개 요청 → 반환 수가 limit보다 많으면 다음 페이지 있음
+        # limit+1개 요청 → Garmin에 더 많은 활동이 있는지 판단
         garmin_activities = garmin_client.get_recent_activities(current_user_id(), limit + 1, offset)
     except RuntimeError as exc:
-        return jsonify({"error": str(exc)}), 401
+        # 401이 아닌 503: Garmin 세션 만료는 인증(로그인) 오류가 아니라 외부 서비스 문제
+        # 프론트엔드에서 garmin_error 플래그로 Garmin 뱃지를 disconnected로 전환한다
+        return jsonify({"error": str(exc), "garmin_error": True}), 503
 
-    has_more = len(garmin_activities) > limit
-    garmin_activities = garmin_activities[:limit]
+    # 러닝 필터 후 has_more 계산: 비러닝 활동만 가득한 페이지에서 버튼이 계속 표시되는 문제 방지
+    running_activities = [a for a in garmin_activities if garmin_client.is_running_activity(a)]
+    has_more = len(running_activities) > limit
+    running_activities = running_activities[:limit]
 
     synced_map = sync_db.get_synced_map(current_user_id())
     result = []
-    for act in garmin_activities:
-        activity_type = act.get("activityType")
-        type_key = activity_type.get("typeKey", "") if isinstance(activity_type, dict) else str(activity_type)
-        if "running" not in type_key.lower():
-            continue  # 러닝 외 종목(사이클, 수영 등) 제외
-
+    for act in running_activities:
         garmin_activity_id = str(act["activityId"])
         stride_m    = act.get("averageStrideLength")  # 단위: 미터
         aerobic_te  = act.get("aerobicTrainingEffect")
@@ -580,6 +615,11 @@ def activity_details_route(garmin_id):
         return jsonify({"error": "잘못된 활동 ID입니다."}), 400
     try:
         data = garmin_client.fetch_activity_details(current_user_id(), garmin_id)
+        # garmin_client가 반환한 내부 오류 메시지를 클라이언트에 그대로 노출하지 않는다
+        if data.get("error"):
+            logging.warning("activity_details 내부 오류 (user_id=%s, garmin_id=%s): %s",
+                            current_user_id(), garmin_id, data["error"])
+            data = {"coords": [], "error": "활동 상세 정보를 불러오는 중 오류가 발생했습니다."}
         return jsonify(data)
     except Exception:
         logging.error("activity_details 오류 (user_id=%s, garmin_id=%s):\n%s",
@@ -690,7 +730,7 @@ def sync():
             })
         except Exception as exc:
             logging.error("Sync 실패 (garmin_id=%s):\n%s", garmin_activity_id, traceback.format_exc())
-            err_msg = str(exc)
+            err_msg = str(exc)[:200]
             sync_db.record_upload_error(current_user_id(), garmin_activity_id, err_msg)
             # Strava duplicate 메시지("/activities/\d+" 포함)는 프론트가 링크 파싱에 사용하므로 그대로 전달.
             # 그 외 내부 오류는 일반 메시지로 교체해 구현 정보 노출을 방지한다.
@@ -717,8 +757,11 @@ def admin_users():
     users = sync_db.list_users()
     for user in users:
         user.update(sync_db.get_user_stats(user["id"]))
-        user["garmin_connected"] = garmin_client.is_logged_in(user["id"])
-        user["strava_connected"] = strava_client.is_connected(user["id"])
+        # 관리자 목록에서는 실제 네트워크 검증 없이 토큰/파일 존재 여부만 확인한다.
+        # is_logged_in/is_connected는 Garmin·Strava API를 실제로 호출해 N명 × 응답 대기가 발생하므로,
+        # 개요 화면에 적합한 경량 버전을 사용한다.
+        user["garmin_connected"] = garmin_client.has_token_files(user["id"])
+        user["strava_connected"] = strava_client.has_tokens(user["id"])
     return jsonify(users)
 
 

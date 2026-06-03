@@ -16,7 +16,7 @@ services:
     # NAS 내장 Reverse Proxy 또는 Nginx가 없는 경우 직접 포트 노출
     # Nginx를 사용하는 경우 아래 ports 블록은 주석 처리하고 networks만 사용
     ports:
-      - "5000:5000"
+      - "8002:5000"
     networks:
       - syncnb_net
     healthcheck:

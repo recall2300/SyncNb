@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from config import DB_PATH
 
 # 이 값을 올리면 _migrate()에서 해당 버전 이상의 마이그레이션이 실행된다
-_SCHEMA_VERSION = 4
+_SCHEMA_VERSION = 5
 
 
 def _conn() -> sqlite3.Connection:
@@ -104,6 +104,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.commit()
         schema_ver = 4
 
+    if schema_ver < 5:
+        # v4 → v5: 비밀번호 변경 시 기존 세션 강제 만료용 버전 카운터 추가
+        conn.execute("ALTER TABLE users ADD COLUMN password_version INTEGER NOT NULL DEFAULT 0")
+        conn.execute("PRAGMA user_version = 5")
+        conn.commit()
+        schema_ver = 5
+
 
 # ── 사용자 관리 ────────────────────────────────────────────────────────────────
 
@@ -133,16 +140,19 @@ def get_user_by_username(username: str) -> dict | None:
     아이디로 사용자를 조회한다. 로그인 처리에 사용.
 
     Returns:
-        {"id", "username", "password_hash", "is_admin"} 또는 None.
+        {"id", "username", "password_hash", "is_admin", "password_version"} 또는 None.
     """
     with _conn() as conn:
         row = conn.execute(
-            "SELECT id, username, password_hash, is_admin FROM users WHERE username=?",
+            "SELECT id, username, password_hash, is_admin, password_version FROM users WHERE username=?",
             (username,),
         ).fetchone()
     if not row:
         return None
-    return {"id": row[0], "username": row[1], "password_hash": row[2], "is_admin": bool(row[3])}
+    return {
+        "id": row[0], "username": row[1], "password_hash": row[2],
+        "is_admin": bool(row[3]), "password_version": row[4],
+    }
 
 
 def get_user_by_id(user_id: int) -> dict | None:
@@ -186,9 +196,29 @@ def user_exists() -> bool:
 
 
 def update_user_password(user_id: int, password_hash: str) -> None:
-    """사용자의 비밀번호 해시를 업데이트한다."""
+    """사용자의 비밀번호 해시를 업데이트하고 password_version을 증가시킨다.
+    버전 증가로 기존 세션이 다음 요청 시 자동 무효화된다."""
     with _conn() as conn:
-        conn.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash, user_id))
+        conn.execute(
+            "UPDATE users SET password_hash=?, password_version=password_version+1 WHERE id=?",
+            (password_hash, user_id),
+        )
+
+
+def get_password_version(user_id: int) -> int | None:
+    """
+    사용자의 password_version을 반환한다.
+    login_required에서 세션 유효성 검증에 사용한다.
+
+    Returns:
+        password_version (int) 또는 None (사용자 없음).
+    """
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT password_version FROM users WHERE id=?",
+            (user_id,),
+        ).fetchone()
+    return row[0] if row else None
 
 
 def update_user_admin(user_id: int, is_admin: bool) -> None:

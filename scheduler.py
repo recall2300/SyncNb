@@ -76,9 +76,7 @@ def _sync_single_user(user_id: int, auto_sync_enabled_at: str | None) -> None:
 
     for act in recent_activities:
         # ── 러닝 활동만 처리 ────────────────────────────────────────────────
-        activity_type = act.get("activityType")
-        type_key = activity_type.get("typeKey", "") if isinstance(activity_type, dict) else str(activity_type)
-        if "running" not in type_key.lower():
+        if not garmin_client.is_running_activity(act):
             continue
 
         garmin_activity_id = str(act["activityId"])

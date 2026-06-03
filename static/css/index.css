@@ -64,6 +64,14 @@ header h1 {
 .dot.on { background: var(--accent); }
 .dot.off{ background: var(--text-3); }
 
+/* ── Header Badges Wrapper ────────────────────── */
+.header-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* ── Header Right ─────────────────────────────── */
 .header-right {
   margin-left: auto;
@@ -92,7 +100,7 @@ header h1 {
   background: var(--accent-dim);
 }
 
-#theme-btn {
+#theme-btn, #profile-btn {
   font-size: 0.85rem;
   padding: 4px 8px;
   letter-spacing: 0;
@@ -334,13 +342,16 @@ tbody td:nth-child(5) { font-family: var(--mono); color: var(--text-2); }
   header { padding: 0 12px; gap: 6px; }
   .header-subtitle { display: none; }
 
-  /* Show dot only, hide badge text label on mobile */
-  .badge { padding: 4px 6px; }
-  #garmin-label, #strava-label { display: none; }
+  /* 모바일: 배지 레이블은 JS가 "Garmin"/"Strava"로 짧게 표시 (연결됨 제거) */
+  .badge { padding: 3px 7px; }
+
+  /* 작은 화면에서 버튼 압축 */
+  .btn-ghost, .icon-btn { padding: 4px 7px; font-size: 0.72rem; }
+  .admin-link { padding: 4px 7px; font-size: 0.72rem; }
 
   main { margin: 12px auto; padding: 0 10px; }
 
-  /* Hide time & notes columns on mobile */
+  /* 시간·비고 열 숨김 */
   thead th:nth-child(5),
   tbody td:nth-child(5),
   thead th:nth-child(7),
@@ -352,13 +363,8 @@ tbody td:nth-child(5) { font-family: var(--mono); color: var(--text-2); }
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
   .map-container { height: 180px; }
   #detail-modal { max-height: 95vh; }
-
-  .btn-ghost, .icon-btn { padding: 4px 7px; font-size: 0.72rem; }
-  .admin-link { padding: 4px 7px; font-size: 0.72rem; }
 }
 
 @media (max-width: 400px) {
-  /* Extra small: also hide distance on very narrow screens */
   header h1 { font-size: 0.9rem; }
-  .btn-ghost span, .admin-link span { display: none; }
 }
